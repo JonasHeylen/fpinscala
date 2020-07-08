@@ -60,6 +60,8 @@ object Either {
 
 }
 
+// https://typelevel.org/cats/datatypes/validated.html
+
 object EitherMain {
   def main(args: Array[String]): Unit = {
     val left: Either[String, Int] = Left[String]("error")
