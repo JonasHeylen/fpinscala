@@ -40,12 +40,24 @@ object RNG {
   def unit[A](a: A): Rand[A] =
     rng => (a, rng)
 
-  def map[A, B](s: Rand[A])(f: A => B): Rand[B] =
-    rng => {
-      val (a, rng2) = s(rng)
-      (f(a), rng2)
+    // def flatMap[A, B](f: Rand[A])(g: A => Rand[B]): Rand[B]
+  def map[A, B](s: Rand[A])(f: A => B): Rand[B] = {
+    // rng => {
+    //   val (a, rng2) = s(rng)
+    //   (f(a), rng2)
+    // }
+    val funky: A => Rand[B] = a => {
+      val b = f(a)
+      rngB => (b,rngB)
     }
+    flatMap(s)(funky)
+  }
 
+  //  def map_[A, B](s: Rand[A])(f: A => B): Rand[B] = flatMap(s)(a => unit(f(a)))
+
+  // def Lunit[A](a: A): List[A] = List(a)
+  // def Lmap[A, B](as: List[A])(f: A=>B) = as.flatMap(x => Lunit(f))
+  
   def nonNegativeInt(rng: RNG): (Int, RNG) = {
     val (randomNumber, nextRng) = rng.nextInt
     (scala.math.abs(randomNumber), nextRng)
@@ -95,14 +107,32 @@ object RNG {
     helpMeGodWithListState(count, List.empty, rng)
   }
 
+  // type Rand[+A] = RNG => (A, RNG)
+  // def flatMap[A, B](f: Rand[A])(g: A => Rand[B]): Rand[B]
   def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = {
-    rng =>
-      {
-        val (a, rngA) = ra(rng) //not an object, but actually a function!
-        val (b, rngB) = rb(rngA)
-        (f(a, b), rngB) //Rand[C]
-      }
+    // rng =>
+    //   {
+    //     val (a, rngA) = ra(rng) //not an object, but actually a function!
+    //     val (b, rngB) = rb(rngA)
+    //     (f(a, b), rngB) //Rand[C]
+    //   }
+
+    //  val wholeThing: Rand[C] = (rng: RNG) => {
+    //   val (b, _) = rb(rng)
+    //   val (a, _) = ra(rng)
+    //   (f(a,b), rng)
+    // }
+    // wholeThing
+
+    flatMap(ra)(a => map(rb)(b => f(a,b)))
   }
+
+  def map2_[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    // for {
+    //   a <- ra
+    //   b <- rb
+    // } yield f(a, b)
+    flatMap(ra)(a => map(rb)(b => f(a, b)))
 
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = {
     def sequenceStep(
@@ -121,7 +151,23 @@ object RNG {
     rng => sequenceStep(fs, List.empty, rng)
   }
 
-  def flatMap[A, B](f: Rand[A])(g: A => Rand[B]): Rand[B] = ???
+  // type Rand[A] = RNG => (A, RNG)
+  // A => Rand[B] = A => RNG => (B, RNG)
+  def flatMap[A, B](f: Rand[A])(g: A => Rand[B]): Rand[B] = {
+    rng => {
+      val (a, newRng) = f(rng)
+      g(a)(newRng)
+    }
+  }
+
+  
+
+  // def listStuff(db: DB): List[Stuff] = ???
+
+  // type DBAction[A] = DB => A
+  
+  // def listStuff2: DBAction[List[Stuff]] = db => ???
+
 }
 
 case class State[S, +A](run: S => (A, S)) {
