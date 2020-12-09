@@ -66,6 +66,13 @@ object Par {
       if (run(es)(cond).get) t(es) // Notice we are blocking on the result of `cond`.
       else f(es)
 
+  def parFilter[A](as: List[A])(f:A => Boolean): Par[List[A]] = {
+    map(sequence(as.map{
+      elem => 
+      lazyUnit(if(f(elem)) Some(elem) else None)
+    }))(_.flatten)
+  }
+
   /* Gives us infix syntax for `Par`. */
   implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
 
@@ -89,5 +96,10 @@ object Examples {
 object Main extends App {
   val ps = List(Par.unit(1),Par.unit(2),Par.unit(3))
   val es = Executors.newFixedThreadPool(2)
-  println(Par.run(es)(Par.sequence(ps)).get)
+  //println(Par.run(es)(Par.sequence(ps)).get)
+
+  val smth = List(1,2,3,4)
+  //println(Par.run(es)(Par.parFilter(smth)(x => x < 3)))
+
+  println(Par.run(es)(Par.fork(Par.fork(Par.fork(Par.unit(1))))))
 }
